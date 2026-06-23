@@ -1,0 +1,20 @@
+name: Build postgres
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - docker/18/Dockerfile
+      - docker/18/common/**
+      - .github/workflows/build-postgres.yml
+      - .github/workflows/_reusable-build.yml
+
+jobs:
+  build:
+    uses: ./.github/workflows/_reusable-build.yml
+    with:
+      tag: "18"
+      context: docker/18
+      dockerfile: docker/18/Dockerfile
