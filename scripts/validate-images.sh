@@ -66,7 +66,22 @@ for i in "${!NAMES[@]}"; do
     echo "  actual:   $(echo "${actual}" | tr '\n' ' ')"
     failed=1
   else
-    echo "OK ${name} -> ${expected}"
+    container_ip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' pg-validate)
+    if [ -z "${container_ip}" ]; then
+      echo "FAIL ssl: could not determine container IP for ${name}"
+      failed=1
+    elif docker exec pg-validate psql "postgresql://postgres:${PASS}@${container_ip}:5432/postgres?sslmode=disable" -c 'SELECT 1' >/dev/null 2>&1; then
+      echo "FAIL ssl: non-SSL remote connection should be rejected for ${name}"
+      failed=1
+    elif ! docker exec pg-validate psql "postgresql://postgres:${PASS}@${container_ip}:5432/postgres?sslmode=require" -c 'SELECT 1' >/dev/null 2>&1; then
+      echo "FAIL ssl: sslmode=require remote connection failed for ${name}"
+      failed=1
+    elif ! docker exec pg-validate psql "postgresql://postgres:${PASS}@127.0.0.1:5432/postgres?sslmode=disable" -c 'SELECT 1' >/dev/null 2>&1; then
+      echo "FAIL ssl: local non-SSL connection failed for ${name}"
+      failed=1
+    else
+      echo "OK ${name} -> ${expected} (ssl: remote require, local ok)"
+    fi
   fi
   cleanup
 done
