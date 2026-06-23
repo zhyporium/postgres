@@ -17,6 +17,24 @@ ghcr.io/zhyporium/postgres:<tag>
 | `18_timescale` | TimescaleDB            | `timescaledb`           |
 | `18_vt`        | pgvector + TimescaleDB | `vector`, `timescaledb` |
 
+### GHCR access (required for `docker pull`)
+
+New GHCR packages are **private by default**. Anonymous pulls (including `docker compose up`) return `unauthorized` until you do one of the following:
+
+1. **Recommended — make the package public** (one time, after the first CI push):
+   - Open [Package settings → postgres](https://github.com/orgs/zhyporium/packages/container/postgres/settings)
+   - Under **Danger Zone**, change visibility to **Public**
+
+2. **Or authenticate** (keeps the package private):
+
+   ```bash
+   # PAT needs read:packages (classic) or Packages: read (fine-grained)
+   echo "$GITHUB_TOKEN" | docker login ghcr.io -u YOUR_GITHUB_USERNAME --password-stdin
+   docker compose pull
+   ```
+
+Ensure at least one variant workflow has run on `main` so the tag exists (e.g. `18_vt` from `build-postgres-pgvector-timescale.yml`).
+
 ### Included on every variant
 
 These are enabled automatically on first database init:
@@ -36,6 +54,27 @@ psql "postgresql://postgres:yourpassword@localhost:5432/postgres?sslmode=require
 ```
 
 Note: traffic from your host to a published Docker port is not seen as localhost inside the container — use `sslmode=require` there too. Use `sslmode=verify-full` only if you mount your own CA-trusted certificates.
+
+#### Prisma
+
+Use `sslmode=require` in `DATABASE_URL` (see [`examples/`](examples/) `.env.example` files). The server still requires TLS for remote connections.
+
+Prisma 7 (`@prisma/adapter-pg` / node-pg) may reject the self-signed certificate even with `sslmode=require`. If you see a certificate error, use one of:
+
+1. **Adapter config** (recommended):
+
+   ```ts
+   new PrismaPg({
+     connectionString: process.env.DATABASE_URL,
+     ssl: { rejectUnauthorized: false },
+   });
+   ```
+
+2. **URL with libpq-compatible semantics:** `?sslmode=require&uselibpqcompat=true&schema=public`
+
+3. **node-pg fallback URL:** `?sslmode=no-verify&schema=public` (Prisma/AWS docs; not understood by `psql`)
+
+Keep `sslmode=require` for `psql` and other libpq clients.
 
 ## Pull and run
 
