@@ -13,7 +13,7 @@ Reference deploy templates for running published images from GHCR. These files a
 
 Every variant includes `pg_stat_statements`, `pg_trgm`, and `unaccent` on first init.
 
-Each variant folder includes a `.env.example` with a Prisma `DATABASE_URL`. From another Compose service, use the service hostname (`postgres`); from the host, use `localhost`.
+Each variant folder includes a `.env.example` with `POSTGRES_IMAGE` (digest-pinned) and a Prisma `DATABASE_URL`. From another Compose service, use the service hostname (`postgres`); from the host, use `localhost`.
 
 ## Run
 
@@ -24,6 +24,15 @@ cd examples/18_pgvector
 cp .env.example .env   # required — set a strong POSTGRES_PASSWORD
 docker compose up -d
 ```
+
+After CI publishes new images, refresh pinned digests from the repo root:
+
+```bash
+./scripts/pin-example-images.sh
+cp examples/18_pgvector/.env.example examples/18_pgvector/.env   # if you use .env
+```
+
+Optional TLS on first init: uncomment `POSTGRES_SSL=1` in `.env` and add `sslmode=require` to remote `DATABASE_URL` values.
 
 Connect (uses credentials from your `.env`):
 

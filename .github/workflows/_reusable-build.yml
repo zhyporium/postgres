@@ -35,6 +35,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: docker/build-push-action@v5
+        id: build
         with:
           context: ./${{ inputs.context }}
           file: ./${{ inputs.dockerfile }}
@@ -43,3 +44,5 @@ jobs:
           tags: ghcr.io/zhyporium/postgres:${{ inputs.tag }}
           labels: |
             org.opencontainers.image.source=https://github.com/zhyporium/postgres
+
+      - run: echo "**Digest:** \`${{ steps.build.outputs.digest }}\`" >> $GITHUB_STEP_SUMMARY

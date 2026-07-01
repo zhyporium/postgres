@@ -1,10 +1,11 @@
 services:
   postgres:
-    image: ghcr.io/zhyporium/postgres:18
+    image: ${POSTGRES_IMAGE:?Set POSTGRES_IMAGE in .env — run scripts/pin-example-images.sh}
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
       POSTGRES_DB: ${POSTGRES_DB:-postgres}
+      POSTGRES_SSL: ${POSTGRES_SSL:-}
     volumes:
       - postgres_data:/var/lib/postgresql
     ports:
