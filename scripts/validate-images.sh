@@ -54,7 +54,7 @@ for i in "${!NAMES[@]}"; do
     continue
   fi
 
-  actual=$(docker exec pg-validate psql -U postgres -d postgres -Atc \
+  actual=$(docker exec pg-validate psql "postgresql://postgres:${PASS}@127.0.0.1:5432/postgres" -Atc \
     "SELECT extname FROM pg_extension ORDER BY extname;")
   missing=""
   for ext in ${expected}; do

@@ -91,6 +91,10 @@ Build, start, and check extensions for every variant:
 
 **Existing data volumes are not reconfigured** when you pull a newer image. `pg_hba.conf` and init extensions only apply on first init. To pick up changes from this repo on an existing deployment, recreate the volume or apply the config manually.
 
+## Security
+
+On first init, `pg_hba.conf` requires `scram-sha-256` for all connections (no `trust` rules). Compose examples bind port `5432` to `127.0.0.1` only and require `POSTGRES_PASSWORD` in `.env`. Traffic is not encrypted in transit — use a TLS-terminating proxy or network isolation for production deployments exposed beyond localhost.
+
 ## CI/CD
 
 GitHub Actions builds and pushes **multi-arch** images (`linux/amd64`, `linux/arm64`) to GHCR. Each variant has its own workflow under [`.github/workflows/`](.github/workflows/); only changed images are rebuilt on push to `main`.

@@ -21,14 +21,14 @@ Pick a variant folder, copy env defaults, then start:
 
 ```bash
 cd examples/18_pgvector
-cp .env.example .env   # edit POSTGRES_PASSWORD before production use
+cp .env.example .env   # required — set a strong POSTGRES_PASSWORD
 docker compose up -d
 ```
 
-Connect:
+Connect (uses credentials from your `.env`):
 
 ```bash
-psql "postgresql://postgres:postgres@localhost:5432/postgres"
+psql "$DATABASE_URL"
 ```
 
 Stop and remove:
