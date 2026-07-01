@@ -13,9 +13,9 @@ Reference deploy templates for running published images from GHCR. These files a
 
 Every variant includes `pg_stat_statements`, `pg_trgm`, and `unaccent` on first init.
 
-TLS is enabled with a self-signed certificate on first init. Remote connections require `sslmode=require`; only in-container localhost (socket / `127.0.0.1`) may connect without SSL.
+TLS is enabled with a self-signed certificate on first init. Host connections via a published port should use `sslmode=require`. Sibling services on the same Compose network can connect without SSL (e.g. `postgresql://postgres:password@postgres:5432/postgres`). In-container localhost (socket / `127.0.0.1`) may also connect without SSL.
 
-Each variant folder includes a `.env.example` with `DATABASE_URL` for Prisma (`sslmode=require&schema=public`). If Prisma 7 fails on the self-signed cert, see the **Prisma** subsection in the root [`README.md`](../README.md#ssl).
+Each variant folder includes a `.env.example` with `DATABASE_URL` for Prisma when connecting from the host (`sslmode=require&schema=public`). For an app service in the same Compose file, point `DATABASE_URL` at the service name and omit `sslmode=require`. If Prisma 7 fails on the self-signed cert from the host, see the **Prisma** subsection in the root [`README.md`](../README.md#ssl).
 
 ## Run
 

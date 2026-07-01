@@ -47,13 +47,13 @@ Variant-specific extensions are created via init SQL in `/docker-entrypoint-init
 
 ### SSL
 
-On first init, each image generates a self-signed certificate and enables TLS. Remote TCP connections require SSL (`hostssl` only); local connections via Unix socket or `127.0.0.1` / `::1` inside the container may use non-SSL.
+On first init, each image generates a self-signed certificate and enables TLS. Connections from other containers on Docker/Compose networks may use plain TCP (password auth). Traffic from outside those private ranges must use TLS (`hostssl`).
 
 ```bash
 psql "postgresql://postgres:yourpassword@localhost:5432/postgres?sslmode=require"
 ```
 
-Note: traffic from your host to a published Docker port is not seen as localhost inside the container — use `sslmode=require` there too. Use `sslmode=verify-full` only if you mount your own CA-trusted certificates.
+Note: traffic from your host to a published Docker port is not seen as localhost inside the container — use `sslmode=require` there too. Sibling services on the same Compose network can connect with `postgresql://postgres:password@postgres:5432/db` (no SSL required). Use `sslmode=verify-full` only if you mount your own CA-trusted certificates.
 
 #### Prisma
 
@@ -138,7 +138,7 @@ Build, start, and check extensions and SSL policy for every variant:
 ./scripts/validate-images.sh
 ```
 
-The script verifies extensions, rejects non-SSL remote TCP, accepts `sslmode=require` over the container network IP, and still allows local non-SSL on `127.0.0.1`.
+The script verifies extensions, accepts plain TCP from a sibling container on a Compose network, accepts `sslmode=require` over the service hostname, and still allows local non-SSL on `127.0.0.1`.
 
 **Existing data volumes are not reconfigured** when you pull a newer image. SSL certs, `pg_hba.conf`, and init extensions only apply on first init. To pick up changes from this repo on an existing deployment, recreate the volume or apply the config manually.
 

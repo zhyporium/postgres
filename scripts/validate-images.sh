@@ -15,7 +15,8 @@ EXPECTED_LIST=(
 )
 
 cleanup() {
-  docker rm -f pg-validate >/dev/null 2>&1 || true
+  docker rm -f pg-validate pg-validate-client >/dev/null 2>&1 || true
+  docker network rm pg-validate-net >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
 
@@ -34,8 +35,9 @@ for i in "${!NAMES[@]}"; do
   fi
 
   cleanup
+  docker network create pg-validate-net >/dev/null
   echo "=== RUN ${name} ==="
-  docker run -d --name pg-validate -e POSTGRES_PASSWORD="${PASS}" "validate/${name}:18" >/dev/null
+  docker run -d --name pg-validate --network pg-validate-net -e POSTGRES_PASSWORD="${PASS}" "validate/${name}:18" >/dev/null
   ready=0
   for _ in $(seq 1 30); do
     if docker exec pg-validate pg_isready -U postgres >/dev/null 2>&1; then
@@ -66,21 +68,19 @@ for i in "${!NAMES[@]}"; do
     echo "  actual:   $(echo "${actual}" | tr '\n' ' ')"
     failed=1
   else
-    container_ip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' pg-validate)
-    if [ -z "${container_ip}" ]; then
-      echo "FAIL ssl: could not determine container IP for ${name}"
+    if ! docker run --rm --network pg-validate-net "validate/${name}:18" \
+      psql "postgresql://postgres:${PASS}@pg-validate:5432/postgres?sslmode=disable" -c 'SELECT 1' >/dev/null 2>&1; then
+      echo "FAIL ssl: sibling container non-SSL connection failed for ${name}"
       failed=1
-    elif docker exec pg-validate psql "postgresql://postgres:${PASS}@${container_ip}:5432/postgres?sslmode=disable" -c 'SELECT 1' >/dev/null 2>&1; then
-      echo "FAIL ssl: non-SSL remote connection should be rejected for ${name}"
-      failed=1
-    elif ! docker exec pg-validate psql "postgresql://postgres:${PASS}@${container_ip}:5432/postgres?sslmode=require" -c 'SELECT 1' >/dev/null 2>&1; then
-      echo "FAIL ssl: sslmode=require remote connection failed for ${name}"
+    elif ! docker run --rm --network pg-validate-net "validate/${name}:18" \
+      psql "postgresql://postgres:${PASS}@pg-validate:5432/postgres?sslmode=require" -c 'SELECT 1' >/dev/null 2>&1; then
+      echo "FAIL ssl: sibling container sslmode=require connection failed for ${name}"
       failed=1
     elif ! docker exec pg-validate psql "postgresql://postgres:${PASS}@127.0.0.1:5432/postgres?sslmode=disable" -c 'SELECT 1' >/dev/null 2>&1; then
       echo "FAIL ssl: local non-SSL connection failed for ${name}"
       failed=1
     else
-      echo "OK ${name} -> ${expected} (ssl: remote require, local ok)"
+      echo "OK ${name} -> ${expected} (ssl: compose ok, local ok)"
     fi
   fi
   cleanup
