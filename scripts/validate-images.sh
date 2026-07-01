@@ -69,18 +69,14 @@ for i in "${!NAMES[@]}"; do
     failed=1
   else
     if ! docker run --rm --network pg-validate-net "validate/${name}:18" \
-      psql "postgresql://postgres:${PASS}@pg-validate:5432/postgres?sslmode=disable" -c 'SELECT 1' >/dev/null 2>&1; then
-      echo "FAIL ssl: sibling container non-SSL connection failed for ${name}"
+      psql "postgresql://postgres:${PASS}@pg-validate:5432/postgres" -c 'SELECT 1' >/dev/null 2>&1; then
+      echo "FAIL connect: sibling container connection failed for ${name}"
       failed=1
-    elif ! docker run --rm --network pg-validate-net "validate/${name}:18" \
-      psql "postgresql://postgres:${PASS}@pg-validate:5432/postgres?sslmode=require" -c 'SELECT 1' >/dev/null 2>&1; then
-      echo "FAIL ssl: sibling container sslmode=require connection failed for ${name}"
-      failed=1
-    elif ! docker exec pg-validate psql "postgresql://postgres:${PASS}@127.0.0.1:5432/postgres?sslmode=disable" -c 'SELECT 1' >/dev/null 2>&1; then
-      echo "FAIL ssl: local non-SSL connection failed for ${name}"
+    elif ! docker exec pg-validate psql "postgresql://postgres:${PASS}@127.0.0.1:5432/postgres" -c 'SELECT 1' >/dev/null 2>&1; then
+      echo "FAIL connect: local connection failed for ${name}"
       failed=1
     else
-      echo "OK ${name} -> ${expected} (ssl: compose ok, local ok)"
+      echo "OK ${name} -> ${expected}"
     fi
   fi
   cleanup

@@ -17,24 +17,6 @@ ghcr.io/zhyporium/postgres:<tag>
 | `18_timescale` | TimescaleDB            | `timescaledb`           |
 | `18_vt`        | pgvector + TimescaleDB | `vector`, `timescaledb` |
 
-### GHCR access (required for `docker pull`)
-
-New GHCR packages are **private by default**. Anonymous pulls (including `docker compose up`) return `unauthorized` until you do one of the following:
-
-1. **Recommended — make the package public** (one time, after the first CI push):
-   - Open [Package settings → postgres](https://github.com/orgs/zhyporium/packages/container/postgres/settings)
-   - Under **Danger Zone**, change visibility to **Public**
-
-2. **Or authenticate** (keeps the package private):
-
-   ```bash
-   # PAT needs read:packages (classic) or Packages: read (fine-grained)
-   echo "$GITHUB_TOKEN" | docker login ghcr.io -u YOUR_GITHUB_USERNAME --password-stdin
-   docker compose pull
-   ```
-
-Ensure at least one variant workflow has run on `main` so the tag exists (e.g. `18_vt` from `build-postgres-pgvector-timescale.yml`).
-
 ### Included on every variant
 
 These are enabled automatically on first database init:
@@ -44,37 +26,6 @@ These are enabled automatically on first database init:
 - `unaccent`
 
 Variant-specific extensions are created via init SQL in `/docker-entrypoint-initdb.d/`. Init scripts only run on a **fresh** data directory.
-
-### SSL
-
-On first init, each image generates a self-signed certificate and enables TLS. Connections from other containers on Docker/Compose networks may use plain TCP (password auth). Traffic from outside those private ranges must use TLS (`hostssl`).
-
-```bash
-psql "postgresql://postgres:yourpassword@localhost:5432/postgres?sslmode=require"
-```
-
-Note: traffic from your host to a published Docker port is not seen as localhost inside the container — use `sslmode=require` there too. Sibling services on the same Compose network can connect with `postgresql://postgres:password@postgres:5432/db` (no SSL required). Use `sslmode=verify-full` only if you mount your own CA-trusted certificates.
-
-#### Prisma
-
-Use `sslmode=require` in `DATABASE_URL` (see [`examples/`](examples/) `.env.example` files). The server still requires TLS for remote connections.
-
-Prisma 7 (`@prisma/adapter-pg` / node-pg) may reject the self-signed certificate even with `sslmode=require`. If you see a certificate error, use one of:
-
-1. **Adapter config** (recommended):
-
-   ```ts
-   new PrismaPg({
-     connectionString: process.env.DATABASE_URL,
-     ssl: { rejectUnauthorized: false },
-   });
-   ```
-
-2. **URL with libpq-compatible semantics:** `?sslmode=require&uselibpqcompat=true&schema=public`
-
-3. **node-pg fallback URL:** `?sslmode=no-verify&schema=public` (Prisma/AWS docs; not understood by `psql`)
-
-Keep `sslmode=require` for `psql` and other libpq clients.
 
 ## Pull and run
 
@@ -95,7 +46,7 @@ docker run -d \
 Connect:
 
 ```bash
-psql "postgresql://postgres:yourpassword@localhost:5432/postgres?sslmode=require"
+psql "postgresql://postgres:yourpassword@localhost:5432/postgres"
 ```
 
 ## When to use which variant
@@ -132,15 +83,13 @@ docker build -f docker/18/pgvector-timescale/Dockerfile -t postgres:18_vt docker
 
 ## Validate locally
 
-Build, start, and check extensions and SSL policy for every variant:
+Build, start, and check extensions for every variant:
 
 ```bash
 ./scripts/validate-images.sh
 ```
 
-The script verifies extensions, accepts plain TCP from a sibling container on a Compose network, accepts `sslmode=require` over the service hostname, and still allows local non-SSL on `127.0.0.1`.
-
-**Existing data volumes are not reconfigured** when you pull a newer image. SSL certs, `pg_hba.conf`, and init extensions only apply on first init. To pick up changes from this repo on an existing deployment, recreate the volume or apply the config manually.
+**Existing data volumes are not reconfigured** when you pull a newer image. `pg_hba.conf` and init extensions only apply on first init. To pick up changes from this repo on an existing deployment, recreate the volume or apply the config manually.
 
 ## CI/CD
 
@@ -161,7 +110,7 @@ Workflows can also be run manually via **workflow_dispatch**.
 docker/18/
 ├── Dockerfile                 # vanilla (tag: 18)
 ├── common/
-│   ├── 00-ssl.sh                # self-signed TLS + pg_hba on first init
+│   ├── 00-pg_hba.sh             # pg_hba on first init
 │   ├── pg_hba.conf
 │   └── 01-default-extensions.sql
 ├── pgvector/
