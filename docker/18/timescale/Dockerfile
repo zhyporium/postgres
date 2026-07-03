@@ -3,8 +3,9 @@ COPY common/install-timescale.sh /tmp/install-timescale.sh
 RUN apt-get update \
   && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
   gnupg curl ca-certificates \
-  && bash /tmp/install-timescale.sh \
-  && rm -rf /var/lib/apt/lists/* /tmp/install-timescale.sh
+  && apt-get clean \
+  && rm -rf /var/lib/apt/lists/*
+RUN bash /tmp/install-timescale.sh && rm -f /tmp/install-timescale.sh
 RUN echo "shared_preload_libraries = 'timescaledb,pg_stat_statements'" \
   >> /usr/share/postgresql/postgresql.conf.sample
 COPY common/pg_hba.conf /usr/local/etc/postgresql/

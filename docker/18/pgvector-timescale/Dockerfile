@@ -1,14 +1,18 @@
 FROM postgres:18-bookworm
 COPY common/install-timescale.sh /tmp/install-timescale.sh
 RUN apt-get update \
-   && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-   gnupg curl ca-certificates \
-   && bash /tmp/install-timescale.sh \
-   && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-   postgresql-18-pgvector \
-   && rm -rf /var/lib/apt/lists/* /tmp/install-timescale.sh
+  && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+  gnupg curl ca-certificates \
+  && apt-get clean \
+  && rm -rf /var/lib/apt/lists/*
+RUN bash /tmp/install-timescale.sh && rm -f /tmp/install-timescale.sh
+RUN apt-get update \
+  && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+  postgresql-18-pgvector \
+  && apt-get clean \
+  && rm -rf /var/lib/apt/lists/*
 RUN echo "shared_preload_libraries = 'timescaledb,pg_stat_statements'" \
-   >> /usr/share/postgresql/postgresql.conf.sample
+  >> /usr/share/postgresql/postgresql.conf.sample
 COPY common/pg_hba.conf /usr/local/etc/postgresql/
 COPY common/01-pg_hba.sh /docker-entrypoint-initdb.d/01-pg_hba.sh
 RUN chmod +x /docker-entrypoint-initdb.d/01-pg_hba.sh
