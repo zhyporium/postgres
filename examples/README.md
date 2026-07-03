@@ -32,8 +32,6 @@ After CI publishes new images, refresh pinned digests from the repo root:
 cp examples/18_pgvector/.env.example examples/18_pgvector/.env   # if you use .env
 ```
 
-Optional TLS on first init: uncomment `POSTGRES_SSL=1` in `.env` and add `sslmode=require` to remote `DATABASE_URL` values.
-
 Connect (uses credentials from your `.env`):
 
 ```bash

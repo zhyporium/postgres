@@ -89,47 +89,4 @@ if [ "${failed}" -ne 0 ]; then
 fi
 
 echo ""
-echo "=== SSL optional (postgres) ==="
-cleanup
-docker network create pg-validate-net >/dev/null
-docker run -d --name pg-validate --network pg-validate-net \
-  -e POSTGRES_PASSWORD="${PASS}" -e POSTGRES_SSL=1 \
-  "validate/postgres:18" >/dev/null
-ready=0
-for _ in $(seq 1 30); do
-  if docker exec pg-validate pg_isready -U postgres >/dev/null 2>&1; then
-    ready=1
-    break
-  fi
-  sleep 1
-done
-if [ "${ready}" -ne 1 ]; then
-  echo "FAIL startup: postgres with POSTGRES_SSL=1"
-  docker logs pg-validate 2>&1 | tail -20
-  failed=1
-else
-  ssl_state=$(docker exec pg-validate psql "postgresql://postgres:${PASS}@127.0.0.1:5432/postgres" -Atc "SHOW ssl;")
-  if [ "${ssl_state}" != "on" ]; then
-    echo "FAIL ssl: expected on, got ${ssl_state}"
-    failed=1
-  elif ! docker exec pg-validate psql "postgresql://postgres:${PASS}@127.0.0.1:5432/postgres?sslmode=require" -c 'SELECT 1' >/dev/null 2>&1; then
-    echo "FAIL ssl: sslmode=require connection failed"
-    failed=1
-  elif ! docker run --rm --network pg-validate-net "validate/postgres:18" \
-    psql "postgresql://postgres:${PASS}@pg-validate:5432/postgres" -c 'SELECT 1' >/dev/null 2>&1; then
-    echo "FAIL ssl: plain sibling container connection failed"
-    failed=1
-  else
-    echo "OK postgres SSL enabled with mixed-mode internal access"
-  fi
-fi
-cleanup
-
-if [ "${failed}" -ne 0 ]; then
-  echo ""
-  echo "Validation failed."
-  exit 1
-fi
-
-echo ""
 echo "All images built and passed extension checks."

@@ -95,9 +95,7 @@ Build, start, and check extensions for every variant:
 
 On first init, `pg_hba.conf` requires `scram-sha-256` for all connections (no `trust` rules). Compose examples bind port `5432` to `127.0.0.1` only, require `POSTGRES_PASSWORD` in `.env`, and pin images by digest via `POSTGRES_IMAGE`. After CI publishes new images, run `./scripts/pin-example-images.sh` to refresh example digests (CI also prints the digest in the workflow summary).
 
-**Optional TLS:** set `POSTGRES_SSL=1` on first init to generate a self-signed certificate and apply `pg_hba.ssl.conf`. Remote clients outside Docker private networks must use `sslmode=require`; sibling containers on compose networks can still connect without TLS. Mount your own `${PGDATA}/server.crt` and `server.key` before init to use custom certificates instead.
-
-By default, traffic is not encrypted in transit. Use `POSTGRES_SSL=1` or a TLS-terminating proxy for production deployments exposed beyond localhost.
+Traffic is not encrypted in transit. Use a TLS-terminating proxy for production deployments exposed beyond localhost.
 
 ## CI/CD
 
@@ -118,10 +116,8 @@ Workflows can also be run manually via **workflow_dispatch**.
 docker/18/
 ├── Dockerfile                 # vanilla (tag: 18)
 ├── common/
-│   ├── 00-ssl.sh                # optional TLS on first init
 │   ├── 01-pg_hba.sh             # pg_hba on first init
 │   ├── pg_hba.conf
-│   ├── pg_hba.ssl.conf
 │   ├── install-timescale.sh
 │   └── 01-default-extensions.sql
 ├── pgvector/
